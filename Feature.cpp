@@ -68,18 +68,12 @@ TinyImageFeatureExtractor::operator()(const CByteImage& img_) const
 {
 	CFloatImage tinyImg(_targetW, _targetH, 1);
 
-	/******** BEGIN TODO ********/
-	// Compute tiny image feature
-	// Steps are:
-	// 1) Convert image to grayscale (see convertRGB2GrayImage in Utils.h)
-	// 2) Resize image to be _targetW by _targetH
-	// 
-	// Useful functions:
-	// convertRGB2GrayImage, TypeConvert, WarpGlobal
-
-	printf("TODO: Feature.cpp:80\n"); exit(EXIT_FAILURE); 
-
-	/******** END TODO ********/
+	CFloatImage floatImage;
+	CFloatImage grayImage;
+	TypeConvert(img_, floatImage);
+	convertRGB2GrayImage(floatImage, grayImage);
+	CTransform3x3 scaleXform = CTransform3x3::Scale(_targetW / img_.Shape().width, _targetH / img_.Shape().height);
+	WarpGlobal(grayImage, tinyImg, scaleXform.Inverse(), eWarpInterpLinear, 1.0f);
 
 	return tinyImg;
 }
