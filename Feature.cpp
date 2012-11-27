@@ -155,6 +155,13 @@ _cellSize(cellSize)
     }
 }
 
+
+/*
+	- Standing questions:
+		- Do you take the max gradient, or do you perform operations for each channel?
+		- How do you use orientation to weigh a pixel's contribution?
+		- Normalization?
+*/
 Feature 
 HOGFeatureExtractor::operator()(const CByteImage& img_) const
 {
@@ -162,7 +169,40 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 	// Compute the Histogram of Oriented Gradients feature
 	// Steps are:
 	// 1) Compute gradients in x and y directions
+	CFloatImage convertedImg;
+	TypeConvert(img_, convertedImg);
+
+	CFloatImage derivX;
+	CFloatImage derivY;
+
+	CFloatImage magnitudeImg(convertedImg.Shape());
+	CFloatImage orientationImg(convertedImg.Shape());
+
+	Convolve(convertedImg, derivX, ConvolveKernel_SobelX);
+	Convolve(convertedImg, derivY, ConvolveKernel_SobelY);
+
 	// 2) Compute gradient magnitude and orientation
+	for (int row = 0; row < convertedImg.Shape().height; row++)
+	{
+		for (int column = 0; column < convertedImg.Shape().width; column++)
+		{
+			// get max X and Y gradients
+			float maxX = MAX(derivX.Pixel(column, row, 0), MAX(derivX.Pixel(column, row, 1), derivX.Pixel(column, row, 2)));
+			float maxY = MAX(derivY.Pixel(column, row, 0), MAX(derivY.Pixel(column, row, 1), derivY.Pixel(column, row, 2)));
+
+			// magnitude for x
+			magnitudeImg.Pixel(column, row, 0) = sqrt(pow(maxX, 2) + pow(maxY, 2));
+			// magnitude for y
+			if (maxX == 0)
+			{
+				orientationImg.Pixel(column, row, 0) = (maxY >= 0)? PI/2. : -PI/2.;
+			}
+			else
+			{
+				orientationImg.Pixel(column, row, 0) = (maxX > 0)? atan(maxY / maxX) : atan(maxY / maxX) + 3.14;
+			}
+		}
+	}
 	// 3) Add contribution each pixel to HOG cells whose
 	//    support overlaps with pixel
 	// 4) Normalize HOG for each cell
