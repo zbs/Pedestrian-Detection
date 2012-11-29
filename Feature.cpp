@@ -297,7 +297,7 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 	// convertRGB2GrayImage, TypeConvert, WarpGlobal, Convolve
 
 	/******** END TODO ********/
-	return Feature();
+	return feature;
 }
 
 CByteImage 
