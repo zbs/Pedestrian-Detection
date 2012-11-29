@@ -1,12 +1,21 @@
 #ifndef FEATURE_H
 #define FEATURE_H
 
+#define PI 3.14
 #include "Common.h"
 #include "Utils.h"
 #include "ImageDatabase.h"
-
+#include <math.h>
 typedef CFloatImage Feature;
 typedef std::vector<Feature> FeatureSet;
+
+template <class T>
+T MAX(T x, T y)
+{
+	return (x > y)? x : y;
+}
+
+
 
 // Abstract super class for all feature extractors. 
 class FeatureExtractor
