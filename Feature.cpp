@@ -69,7 +69,7 @@ TinyImageFeatureExtractor::operator()(const CByteImage& img_) const
 	CFloatImage tinyImg(_targetW, _targetH, 1);
 
 	/******** BEGIN TODO ********/
-	// Compute tiny image feature
+	// Compute tiny image feature, output should be _targetW by _targetH a grayscale image
 	// Steps are:
 	// 1) Convert image to grayscale (see convertRGB2GrayImage in Utils.h)
 	// 2) Resize image to be _targetW by _targetH
@@ -167,16 +167,25 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 	/******** BEGIN TODO ********/
 	// Compute the Histogram of Oriented Gradients feature
 	// Steps are:
-	// 1) Compute gradients in x and y directions
+	// 1) Compute gradients in x and y directions. We provide the 
+	//    derivative kernel proposed in the paper in _kernelDx and
+	//    _kernelDy.
 	// 2) Compute gradient magnitude and orientation
 	// 3) Add contribution each pixel to HOG cells whose
-	//    support overlaps with pixel
-	// 4) Normalize HOG for each cell
+	//    support overlaps with pixel. Each cell has a support of size
+	//    _cellSize and each histogram has _nAngularBins.
+	// 4) Normalize HOG for each cell. One simple strategy that is
+	//    is also used in the SIFT descriptor is to first threshold
+	//    the bin values so that no bin value is larger than some
+	//    threshold (we leave it up to you do find this value) and
+	//    then re-normalize the histogram so that it has norm 1. A more 
+	//    elaborate normalization scheme is proposed in Dalal & Triggs
+	//    paper but we leave that as extra credit.
 	// 
 	// Useful functions:
-	// convertRGB2GrayImage, TypeConvert, WarpGlobal, Convolve, 
+	// convertRGB2GrayImage, TypeConvert, WarpGlobal, Convolve
 
-	printf("TODO: Feature.cpp:189\n"); exit(EXIT_FAILURE); 
+	printf("TODO: Feature.cpp:198\n"); exit(EXIT_FAILURE); 
 
 	/******** END TODO ********/
 
