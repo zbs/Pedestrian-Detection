@@ -283,7 +283,7 @@ SupportVectorMachine::predictSlidingWindow(const Feature& feat) const
 	// Convolve, BandSelect, this->getWeights(), this->getBiasTerm()
 
 	Feature weights = this->getWeights();
-	int weightBands = weights.BandSize();
+	int weightBands = weights.Shape().nBands;
 
 	// set the kernel origin to be the center of the window
 	for(int band=0; band<weightBands; band++)
@@ -298,7 +298,7 @@ SupportVectorMachine::predictSlidingWindow(const Feature& feat) const
 		{
 			for(int y=0; y<feat.Shape().height; y++)
 			{
-				score.Pixel(x,y,0) += feat.Pixel(x,y,band);
+				score.Pixel(x,y,0) += dest.Pixel(x,y,band);
 			}
 		}
 	}
