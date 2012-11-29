@@ -161,10 +161,13 @@ _cellSize(cellSize)
 		- Do you take the max gradient, or do you perform operations for each channel?
 		- How do you use orientation to weigh a pixel's contribution?
 		- Normalization?
+		- Is unsigned between 0 and 180, or between PI/2 and -PI/2? Arctan naturally suggests the latter.
+		- Am I doing gaussian correctly? 
 */
 Feature 
 HOGFeatureExtractor::operator()(const CByteImage& img_) const
 {
+	float sigma = _cellSize / 2.;
 	/******** BEGIN TODO ********/
 	// Compute the Histogram of Oriented Gradients feature
 	// Steps are:
@@ -178,8 +181,12 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 	CFloatImage magnitudeImg(convertedImg.Shape());
 	CFloatImage orientationImg(convertedImg.Shape());
 
-	Convolve(convertedImg, derivX, ConvolveKernel_SobelX);
-	Convolve(convertedImg, derivY, ConvolveKernel_SobelY);
+	Convolve(convertedImg, derivX, _kernelDx);
+	Convolve(convertedImg, derivY, _kernelDy);
+
+	int numCellsX = floor(((convertedImg.Shape().width)/((float)_cellSize)));
+	int numCellsY = floor(((convertedImg.Shape().height)/((float)_cellSize)));
+	Feature feature(numCellsX, numCellsY, _nAngularBins);
 
 	// 2) Compute gradient magnitude and orientation
 	for (int row = 0; row < convertedImg.Shape().height; row++)
@@ -199,10 +206,69 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 			}
 			else
 			{
-				orientationImg.Pixel(column, row, 0) = (maxX > 0)? atan(maxY / maxX) : atan(maxY / maxX) + 3.14;
+				orientationImg.Pixel(column, row, 0) = (maxX < 0 && !_unsignedGradients)? atan(maxY / maxX) + PI: atan(maxY / maxX);
+			}
+
+			if (row >= feature.Shape().height * _cellSize || column >= feature.Shape().width * _cellSize)
+			{
+				continue;
+			}
+			//Add contribution
+			
+			float angleUnit = 2*PI / _nAngularBins;
+			float binAngle = (int)((orientationImg.Pixel(column, row, 0) + angleUnit/2.)/angleUnit);
+
+			// Iterate over center, left, right, up, down
+			int cellX = (int) column / _cellSize;
+			int cellY = (int) row / _cellSize;
+			
+			for (int relX = -1; relX <= 1; relX++)
+			{
+					for (int relY = -1; relY <= 1; relY++)
+					{
+						if (abs(relX) + abs(relY) == 2)
+						{
+							continue;
+						}
+
+						int currentCellX = cellX + relX;
+						int currentCellY = cellY + relY;
+
+						if (currentCellX < 0 || currentCellY < 0 || currentCellX >= feature.Shape().width
+								|| currentCellY > feature.Shape().height)
+						{
+							continue;
+						}
+
+						int cellCenterX = currentCellX*_cellSize + _cellSize/2.;
+						int cellCenterY = currentCellY*_cellSize + _cellSize/2.;
+
+						float distance = pow(cellCenterX - column, 2.) + pow(cellCenterY - row, 2.);
+						float gaussianDistance = 1/(sigma*sqrt(2*PI)) * exp(-distance/(2.*pow(sigma, 2.)));
+						
+						feature.Pixel(cellX, cellY, binAngle) += gaussianDistance + magnitudeImg.Pixel(column, row, 0);
+					}
+			}
+		}
+		for (int y = 0; y < feature.Shape().height; y++)
+		{
+			for (int x = 0; x < feature.Shape().width; x++)
+			{
+				// Possibly try L2 norm out here too
+				float sum = 0;
+				for (int bin = 0; bin < _nAngularBins; bin++)
+				{
+					sum += feature.Pixel(x, y, bin);
+				}
+				for (int bin = 0; bin < _nAngularBins; bin++)
+				{
+					feature.Pixel(x, y, bin) /= sum;
+				}
 			}
 		}
 	}
+
+
 	// 3) Add contribution each pixel to HOG cells whose
 	//    support overlaps with pixel
 	// 4) Normalize HOG for each cell
@@ -210,10 +276,10 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 	// Useful functions:
 	// convertRGB2GrayImage, TypeConvert, WarpGlobal, Convolve, 
 
-	printf("TODO: Feature.cpp:189\n"); exit(EXIT_FAILURE); 
+	printf("TODO: Feature.cpp:189\n"); 
 
 	/******** END TODO ********/
-
+	return Feature();
 }
 
 CByteImage 
