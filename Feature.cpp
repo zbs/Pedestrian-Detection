@@ -244,12 +244,13 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 						int cellCenterY = currentCellY*_cellSize + _cellSize/2.;
 
 						float distance = pow(cellCenterX - column, 2.) + pow(cellCenterY - row, 2.);
-						float gaussianDistance = 1/(sigma*sqrt(2*PI)) * exp(-distance/(2.*pow(sigma, 2.)));
+						float gaussianDistance = 1/(pow(sigma, 2)*2*PI) * exp(-distance/(2.* pow(sigma, 2.f)));
 						
 						feature.Pixel(cellX, cellY, binAngle) += gaussianDistance + magnitudeImg.Pixel(column, row, 0);
 					}
 			}
 		}
+		//bin normalization
 		for (int y = 0; y < feature.Shape().height; y++)
 		{
 			for (int x = 0; x < feature.Shape().width; x++)
