@@ -1,5 +1,6 @@
 #ifndef FEATURE_H
 #define FEATURE_H
+
 #define PI 3.14
 #include "Common.h"
 #include "Utils.h"
@@ -13,6 +14,7 @@ T MAX(T x, T y)
 {
 	return (x > y)? x : y;
 }
+
 
 
 // Abstract super class for all feature extractors. 

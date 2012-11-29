@@ -66,16 +66,15 @@ SupportVectorMachine::train(const std::vector<float>& labels, const FeatureSet& 
 	if(_data) delete [] _data;
 
 	/******** BEGIN TODO ********/
-	// Copy the data used for training the SVM into the libsvm data structures.
-	// Put the feature vectors in _data.value and labels in problem.y
+	// Copy the data used for training the SVM into the libsvm data structures "problem".
+	// Put the feature vectors in _data and labels in problem.y. Also, problem.x[k]
+	// should point to the address in _data where the k-th feature vector starts (i.e.,
+	// problem.x[k] = &_data[starting index of k-th feature])
 	//
 	// Hint:
 	// * Don't forget to set _data[].index to the corresponding dimension in
 	//   the original feature vector. You also need to set _data[].index to -1
 	//   right after the last element of each feature vector
-
-
-
 
 	// Vector containing all feature vectors. svm_node is a struct with
 	// two fields, index and value. Index entry indicates position 
@@ -85,7 +84,35 @@ SupportVectorMachine::train(const std::vector<float>& labels, const FeatureSet& 
 	// entry to -1
 	_data = new svm_node[nVecs * (dim + 1)]; 
 
-	printf("TODO: SupportVectorMachine.cpp:88\n"); exit(EXIT_FAILURE); 
+	_data = new svm_node[nVecs * (dim + 1)]; 
+
+	// go through all of the instances
+	for(int i=0; i< nVecs; i++)
+	{
+		// set the labels
+		problem.y[i] = labels[i];
+
+		// for each vector, go through all features, which is each band for each pixel in the image
+		// set the features
+		for(int x = 0; x<shape.width; x++)
+		{
+			for(int y=0; y<shape.height; y++)
+			{
+				for(int band=0; band<shape.nBands; band++)
+				{
+					_data[i*(dim+1) + x*(shape.height+shape.nBands) + y*shape.nBands + band].index = x*(shape.height+shape.nBands) + y*shape.nBands + band;
+					_data[i*(dim+1) + x*(shape.height+shape.nBands) + y*shape.nBands + band].value = fset[i].Pixel(x,y,band);
+					if(x==0 && y==0 && band==0)
+					{
+						problem.x[i] = &_data[i*(dim+1)];
+					}
+				}
+			}
+		}
+		_data[i*(dim+1)+dim].index = -1;
+		_data[i*(dim+1)+dim].value = -1;
+	} 
+
 
 	/******** END TODO ********/
 
@@ -255,7 +282,34 @@ SupportVectorMachine::predictSlidingWindow(const Feature& feat) const
 	// Useful functions:
 	// Convolve, BandSelect, this->getWeights(), this->getBiasTerm()
 
-	printf("TODO: SupportVectorMachine.cpp:274\n"); exit(EXIT_FAILURE); 
+	Feature weights = this->getWeights();
+	int weightBands = weights.BandSize();
+
+	// set the kernel origin to be the center of the window
+	for(int band=0; band<weightBands; band++)
+	{
+		CFloatImage kernel;
+		BandSelect(weights,kernel,band,0);
+		CFloatImage dest;
+		kernel.origin[0] = weights.Shape().width/2;
+		kernel.origin[1] = weights.Shape().height/2;
+		Convolve(feat,dest,kernel);
+		for(int x=0; x<feat.Shape().width; x++)
+		{
+			for(int y=0; y<feat.Shape().height; y++)
+			{
+				score.Pixel(x,y,0) += feat.Pixel(x,y,band);
+			}
+		}
+	}
+	
+	for(int x=0; x<feat.Shape().width; x++)
+	{
+		for(int y=0; y<feat.Shape().height; y++)
+		{
+			score.Pixel(x,y,0) -= this->getBiasTerm();
+		}
+	}
 
 	/******** END TODO ********/
 
