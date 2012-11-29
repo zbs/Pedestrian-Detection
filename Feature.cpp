@@ -81,9 +81,9 @@ TinyImageFeatureExtractor::operator()(const CByteImage& img_) const
 	CFloatImage grayImage;
 	TypeConvert(img_, floatImage);
 	convertRGB2GrayImage(floatImage, grayImage);
-	CTransform3x3 scaleXform = CTransform3x3::Scale(_targetW / img_.Shape().width, _targetH / img_.Shape().height);
+	CTransform3x3 scaleXform = CTransform3x3::Scale(_targetW / (float)img_.Shape().width, _targetH / (float)img_.Shape().height);
 	WarpGlobal(grayImage, tinyImg, scaleXform.Inverse(), eWarpInterpLinear, 1.0f);
-
+	
 	return tinyImg;
 }
 
@@ -218,7 +218,7 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 			}
 			else
 			{
-				orientationImg.Pixel(column, row, 0) = (maxX < 0 && !_unsignedGradients)? atan(maxY / maxX) + PI: atan(maxY / maxX);
+				orientationImg.Pixel(column, row, 0) = (maxX < 0 && true/*!_unsignedGradients*/)? atan(maxY / maxX) + PI: atan(maxY / maxX);
 			}
 
 			if (row >= feature.Shape().height * _cellSize || column >= feature.Shape().width * _cellSize)
