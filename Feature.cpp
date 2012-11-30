@@ -183,7 +183,6 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 	// 1) Compute gradients in x and y directions. We provide the 
 	//    derivative kernel proposed in the paper in _kernelDx and
 	//    _kernelDy.
-
 	CFloatImage convertedImg;
 	TypeConvert(img_, convertedImg);
 
@@ -210,16 +209,29 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 			float maxY = MAX(derivY.Pixel(column, row, 0), MAX(derivY.Pixel(column, row, 1), derivY.Pixel(column, row, 2)));
 
 			// magnitude for x
-			magnitudeImg.Pixel(column, row, 0) = sqrt(pow(maxX, 2) + pow(maxY, 2));
+			magnitudeImg.Pixel(column, row, 0) = sqrt(pow(maxX, 2.f) + pow(maxY, 2.f));
+			
+			
+			/*if (maxX == 0){
+				orientationImg.Pixel(column, row, 0)
+			}*/
 			// magnitude for y
 			if (maxX == 0)
 			{
-				orientationImg.Pixel(column, row, 0) = (maxY >= 0)? PI/2. : -PI/2.;
+				orientationImg.Pixel(column, row, 0) = (maxY >= 0 || _unsignedGradients)? PI/2. : 3.*PI/2.;
 			}
 			else
 			{
-				orientationImg.Pixel(column, row, 0) = (maxX < 0 && true/*!_unsignedGradients*/)? atan(maxY / maxX) + PI: atan(maxY / maxX);
+				float angle = atan(abs(maxY / maxX));
+				angle = (maxX < 0)? PI - angle: angle;
+				
+				if (!_unsignedGradients)
+				{
+					angle = (maxY < 0)? 2* PI - angle: angle;
+				}
+				orientationImg.Pixel(column, row, 0) = angle;
 			}
+			
 
 			if (row >= feature.Shape().height * _cellSize || column >= feature.Shape().width * _cellSize)
 			{
@@ -227,7 +239,7 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 			}
 			//Add contribution
 			
-			float angleUnit = 2*PI / _nAngularBins;
+			float angleUnit = 2.*PI / (float)_nAngularBins;
 			float binAngle = (int)((orientationImg.Pixel(column, row, 0) + angleUnit/2.)/angleUnit);
 
 			// Iterate over center, left, right, up, down
