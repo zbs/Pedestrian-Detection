@@ -84,14 +84,11 @@ SupportVectorMachine::train(const std::vector<float>& labels, const FeatureSet& 
 	// entry to -1
 	_data = new svm_node[nVecs * (dim + 1)]; 
 
-	_data = new svm_node[nVecs * (dim + 1)]; 
-
 	// go through all of the instances
 	for(int i=0; i< nVecs; i++)
 	{
 		// set the labels
 		problem.y[i] = labels[i];
-
 		// for each vector, go through all features, which is each band for each pixel in the image
 		// set the features
 		for(int x = 0; x<shape.width; x++)
@@ -100,8 +97,18 @@ SupportVectorMachine::train(const std::vector<float>& labels, const FeatureSet& 
 			{
 				for(int band=0; band<shape.nBands; band++)
 				{
-					_data[i*(dim+1) + x*(shape.height+shape.nBands) + y*shape.nBands + band].index = x*(shape.height+shape.nBands) + y*shape.nBands + band;
-					_data[i*(dim+1) + x*(shape.height+shape.nBands) + y*shape.nBands + band].value = fset[i].Pixel(x,y,band);
+					int first = i*(dim+1);
+					int second = x*(shape.height*shape.nBands);
+					int third = y*shape.nBands;
+					int fourth = band;
+					int ll =  first + second + third + fourth;
+					int gd = nVecs * (dim + 1);
+					if(ll >= gd)
+					{
+						int s = 100;
+					}
+					_data[ll].index = x*(shape.height+shape.nBands) + y*shape.nBands + band;
+					_data[ll].value = fset[i].Pixel(x,y,band);
 					if(x==0 && y==0 && band==0)
 					{
 						problem.x[i] = &_data[i*(dim+1)];
