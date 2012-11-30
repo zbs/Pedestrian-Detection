@@ -172,6 +172,10 @@ _cellSize(cellSize)
 		- Normalization?
 		- Is unsigned between 0 and 180, or between PI/2 and -PI/2? Arctan naturally suggests the latter.
 		- Am I doing gaussian correctly? 
+
+		- Thresholding
+		- Change bins based on signed/unsigned
+		- Divide by square root of sum, not just sum
 */
 Feature 
 HOGFeatureExtractor::operator()(const CByteImage& img_) const
@@ -198,24 +202,29 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 	int numCellsX = floor(((convertedImg.Shape().width)/((float)_cellSize)));
 	int numCellsY = floor(((convertedImg.Shape().height)/((float)_cellSize)));
 	Feature feature(numCellsX, numCellsY, _nAngularBins);
+	feature.ClearPixels();
 
 	// 2) Compute gradient magnitude and orientation
 	for (int row = 0; row < convertedImg.Shape().height; row++)
 	{
 		for (int column = 0; column < convertedImg.Shape().width; column++)
 		{
-			// get max X and Y gradients
-			float maxX = MAX(derivX.Pixel(column, row, 0), MAX(derivX.Pixel(column, row, 1), derivX.Pixel(column, row, 2)));
-			float maxY = MAX(derivY.Pixel(column, row, 0), MAX(derivY.Pixel(column, row, 1), derivY.Pixel(column, row, 2)));
+			float maxMag = 0;
+			int maxBand = 0;
+			for (int band = 0; band < 3; band++)
+			{
+				float currentMag = sqrt(pow(derivX.Pixel(column, row, band), 2.f) + pow(derivY.Pixel(column, row, band), 2.f));
+				if (currentMag > maxMag)
+				{
+					maxBand = band;
+					maxMag = currentMag;
+				}
+			}
+			magnitudeImg.Pixel(column, row, 0) = maxMag;
+			
+			float maxX = derivX.Pixel(column, row, maxBand);
+			float maxY = derivY.Pixel(column, row, maxBand);
 
-			// magnitude for x
-			magnitudeImg.Pixel(column, row, 0) = sqrt(pow(maxX, 2.f) + pow(maxY, 2.f));
-			
-			
-			/*if (maxX == 0){
-				orientationImg.Pixel(column, row, 0)
-			}*/
-			// magnitude for y
 			if (maxX == 0)
 			{
 				orientationImg.Pixel(column, row, 0) = (maxY >= 0 || _unsignedGradients)? PI/2. : 3.*PI/2.;
@@ -224,23 +233,41 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 			{
 				float angle = atan(abs(maxY / maxX));
 				angle = (maxX < 0)? PI - angle: angle;
-				
-				if (!_unsignedGradients)
+				angle = (maxY < 0)? 2.f * PI - angle: angle;
+
+				if (_unsignedGradients)
 				{
-					angle = (maxY < 0)? 2* PI - angle: angle;
+					angle = fmod(angle, (float)PI);
 				}
 				orientationImg.Pixel(column, row, 0) = angle;
 			}
-			
 
 			if (row >= feature.Shape().height * _cellSize || column >= feature.Shape().width * _cellSize)
 			{
 				continue;
 			}
+
 			//Add contribution
-			
-			float angleUnit = 2.*PI / (float)_nAngularBins;
-			float binAngle = (int)((orientationImg.Pixel(column, row, 0) + angleUnit/2.)/angleUnit);
+			float angleUpperBound = ((_unsignedGradients)? PI : 2.*PI );
+			float angleUnit = angleUpperBound/ (float)_nAngularBins;
+			float angle = orientationImg.Pixel(column, row, 0);
+			float binAngle;
+
+			if (_unsignedGradients)
+			{
+				if (angle < angleUnit/2.f || angle >= PI - angleUnit/2.f)
+				{
+					binAngle = 0;
+				}
+				else
+				{
+					binAngle = (int)((angle + angleUnit/2.f)/angleUnit);
+				}
+			}
+			else
+			{
+				float binAngle = (int)((orientationImg.Pixel(column, row, 0) + angleUnit/2.)/angleUnit);
+			}
 
 			// Iterate over center, left, right, up, down
 			int cellX = (int) column / _cellSize;
@@ -264,30 +291,61 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 							continue;
 						}
 
-						int cellCenterX = currentCellX*_cellSize + _cellSize/2.;
-						int cellCenterY = currentCellY*_cellSize + _cellSize/2.;
+						int cellCenterX = currentCellX*_cellSize + _cellSize/2.-1;
+						int cellCenterY = currentCellY*_cellSize + _cellSize/2.-1;
 
 						float distance = pow(cellCenterX - column, 2.) + pow(cellCenterY - row, 2.);
 						float gaussianDistance = 1/(pow(sigma, 2)*2*PI) * exp(-distance/(2.* pow(sigma, 2.f)));
 						
-						feature.Pixel(cellX, cellY, binAngle) += gaussianDistance + magnitudeImg.Pixel(column, row, 0);
+						float featureVal = feature.Pixel(cellX, cellY, binAngle);
+						if (featureVal < 0){
+							auto stop = 1;
+						}
+						feature.Pixel(cellX, cellY, binAngle) += gaussianDistance * magnitudeImg.Pixel(column, row, 0);
+						float mag = magnitudeImg.Pixel(column, row, 0);
 					}
 			}
 		}
+
+		float epsilon = .1;
+		float threshold = .3;
+
 		//bin normalization
 		for (int y = 0; y < feature.Shape().height; y++)
 		{
 			for (int x = 0; x < feature.Shape().width; x++)
 			{
-				// Possibly try L2 norm out here too
 				float sum = 0;
 				for (int bin = 0; bin < _nAngularBins; bin++)
 				{
-					sum += feature.Pixel(x, y, bin);
+					sum += pow(feature.Pixel(x, y, bin), 2.f);
 				}
+				
+				//as per the wikipedia article, we add an e of .1
+				
+				sum += pow(epsilon, 2.f);
+				
+				float thresholdedSum = 0;
+
 				for (int bin = 0; bin < _nAngularBins; bin++)
 				{
-					feature.Pixel(x, y, bin) /= sum;
+					if (sum <= 0){
+						auto stop = 1;
+					}
+					
+					feature.Pixel(x, y, bin) /= sqrt(sum);
+					if (feature.Pixel(x, y, bin) > threshold)
+					{
+						feature.Pixel(x, y, bin) = threshold;
+					}
+
+					thresholdedSum += pow(feature.Pixel(x, y, bin), 2.f);
+				}
+
+				thresholdedSum += pow(epsilon, 2.f);
+				for (int bin = 0; bin < _nAngularBins; bin++)
+				{
+					feature.Pixel(x, y, bin) /= sqrt(thresholdedSum);
 				}
 			}
 		}
