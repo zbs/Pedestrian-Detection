@@ -180,7 +180,7 @@ _cellSize(cellSize)
 Feature 
 HOGFeatureExtractor::operator()(const CByteImage& img_) const
 {
-	float sigma = _cellSize / 2.;
+	float sigma = _cellSize;
 	/******** BEGIN TODO ********/
 	// Compute the Histogram of Oriented Gradients feature
 	// Steps are:
@@ -286,7 +286,7 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 						int currentCellY = cellY + relY;
 
 						if (currentCellX < 0 || currentCellY < 0 || currentCellX >= feature.Shape().width
-								|| currentCellY > feature.Shape().height)
+								|| currentCellY >= feature.Shape().height)
 						{
 							continue;
 						}
@@ -306,11 +306,9 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 					}
 			}
 		}
-
 		float epsilon = .1;
 		float threshold = .3;
 
-		//bin normalization
 		for (int y = 0; y < feature.Shape().height; y++)
 		{
 			for (int x = 0; x < feature.Shape().width; x++)
@@ -349,6 +347,7 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 				}
 			}
 		}
+
 	}
 
 
