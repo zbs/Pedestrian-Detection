@@ -1,7 +1,7 @@
 #include "Feature.h"
 
 void
-FeatureExtractor::operator()(const ImageDatabase& db, FeatureSet& featureSet) const
+	FeatureExtractor::operator()(const ImageDatabase& db, FeatureSet& featureSet) const
 {
 	int n = db.getSize();
 
@@ -15,7 +15,7 @@ FeatureExtractor::operator()(const ImageDatabase& db, FeatureSet& featureSet) co
 }
 
 CByteImage
-FeatureExtractor::render(const Feature& f, bool normalizeFeat) const
+	FeatureExtractor::render(const Feature& f, bool normalizeFeat) const
 {
 	if(normalizeFeat) {
 		CShape shape = f.Shape();
@@ -40,7 +40,7 @@ FeatureExtractor::render(const Feature& f, bool normalizeFeat) const
 }
 
 FeatureExtractor* 
-FeatureExtractorNew(const char* featureType)
+	FeatureExtractorNew(const char* featureType)
 {
 	if(strcasecmp(featureType, "tinyimg") == 0) return new TinyImageFeatureExtractor();
 	if(strcasecmp(featureType, "hog") == 0) return new HOGFeatureExtractor();
@@ -64,7 +64,7 @@ _targetW(targetWidth), _targetH(targetHeight)
 }
 
 Feature 
-TinyImageFeatureExtractor::operator()(const CByteImage& img_) const
+	TinyImageFeatureExtractor::operator()(const CByteImage& img_) const
 {
 	CFloatImage tinyImg(_targetW, _targetH, 1);
 
@@ -83,12 +83,12 @@ TinyImageFeatureExtractor::operator()(const CByteImage& img_) const
 	convertRGB2GrayImage(floatImage, grayImage);
 	CTransform3x3 scaleXform = CTransform3x3::Scale(_targetW / (float)img_.Shape().width, _targetH / (float)img_.Shape().height);
 	WarpGlobal(grayImage, tinyImg, scaleXform.Inverse(), eWarpInterpLinear, 1.0f);
-	
+
 	return tinyImg;
 }
 
 CByteImage 
-TinyImageFeatureExtractor::render(const Feature& f) const
+	TinyImageFeatureExtractor::render(const Feature& f) const
 {
 	CByteImage viz;
 	TypeConvert(f, viz);
@@ -103,28 +103,28 @@ static float derivKvals[3] = { -1, 0, 1};
 
 HOGFeatureExtractor::HOGFeatureExtractor(int nAngularBins, bool unsignedGradients, int cellSize):
 _nAngularBins(nAngularBins),
-_unsignedGradients(unsignedGradients),
-_cellSize(cellSize)
+	_unsignedGradients(unsignedGradients),
+	_cellSize(cellSize)
 {
-    _kernelDx.ReAllocate(CShape(3, 1, 1), derivKvals, false, 1);
-    _kernelDx.origin[0] = 1;
+	_kernelDx.ReAllocate(CShape(3, 1, 1), derivKvals, false, 1);
+	_kernelDx.origin[0] = 1;
 
-    _kernelDy.ReAllocate(CShape(1, 3, 1), derivKvals, false, 1);
-    _kernelDy.origin[0] = 1;
+	_kernelDy.ReAllocate(CShape(1, 3, 1), derivKvals, false, 1);
+	_kernelDy.origin[0] = 1;
 
-    // For visualization
-    // A set of patches representing the bin orientations. When drawing a hog cell 
-    // we multiply each patch by the hog bin value and add all contributions up to 
-    // form the visual representation of one cell. Full HOG is achieved by stacking 
-    // the viz for individual cells horizontally and vertically.
-    _oriMarkers.resize(_nAngularBins);
-    const int ms = 11;
-    CShape markerShape(ms, ms, 1);
+	// For visualization
+	// A set of patches representing the bin orientations. When drawing a hog cell 
+	// we multiply each patch by the hog bin value and add all contributions up to 
+	// form the visual representation of one cell. Full HOG is achieved by stacking 
+	// the viz for individual cells horizontally and vertically.
+	_oriMarkers.resize(_nAngularBins);
+	const int ms = 11;
+	CShape markerShape(ms, ms, 1);
 
-    // First patch is a horizontal line
-    _oriMarkers[0].ReAllocate(markerShape, true);
-    _oriMarkers[0].ClearPixels();
-    for(int i = 1; i < ms - 1; i++) _oriMarkers[0].Pixel(/*floor(*/ ms/2 /*)*/, i, 0) = 1;
+	// First patch is a horizontal line
+	_oriMarkers[0].ReAllocate(markerShape, true);
+	_oriMarkers[0].ClearPixels();
+	for(int i = 1; i < ms - 1; i++) _oriMarkers[0].Pixel(/*floor(*/ ms/2 /*)*/, i, 0) = 1;
 
 #if 0 // debug
 	std::cout << "DEBUG:" << __FILE__ << ":" << __LINE__ << std::endl;
@@ -144,14 +144,14 @@ _cellSize(cellSize)
 
 	// The other patches are obtained by rotating the first one
 	CTransform3x3 T = CTransform3x3::Translation((ms - 1) / 2.0, (ms - 1) / 2.0);
-    for(int angBin = 1; angBin < _nAngularBins; angBin++) {
-    	double theta;
-    	if(unsignedGradients) theta = 180.0 * (double(angBin) / _nAngularBins);
-    	else theta = 360.0 * (double(angBin) / _nAngularBins);
-   		CTransform3x3 R  = T * CTransform3x3::Rotation(theta) * T.Inverse();
+	for(int angBin = 1; angBin < _nAngularBins; angBin++) {
+		double theta;
+		if(unsignedGradients) theta = 180.0 * (double(angBin) / _nAngularBins);
+		else theta = 360.0 * (double(angBin) / _nAngularBins);
+		CTransform3x3 R  = T * CTransform3x3::Rotation(theta) * T.Inverse();
 
-   		_oriMarkers[angBin].ReAllocate(markerShape, true);
-   		_oriMarkers[angBin].ClearPixels();
+		_oriMarkers[angBin].ReAllocate(markerShape, true);
+		_oriMarkers[angBin].ClearPixels();
 
 		WarpGlobal(_oriMarkers[0], _oriMarkers[angBin], R, eWarpInterpLinear);
 
@@ -161,24 +161,24 @@ _cellSize(cellSize)
 		PRINT_EXPR(debugFName);
 		WriteFile(_oriMarkers[angBin], debugFName);
 #endif
-    }
+	}
 }
 
 
 /*
-	- Standing questions:
-		- Do you take the max gradient, or do you perform operations for each channel?
-		- How do you use orientation to weigh a pixel's contribution?
-		- Normalization?
-		- Is unsigned between 0 and 180, or between PI/2 and -PI/2? Arctan naturally suggests the latter.
-		- Am I doing gaussian correctly? 
+- Standing questions:
+- Do you take the max gradient, or do you perform operations for each channel?
+- How do you use orientation to weigh a pixel's contribution?
+- Normalization?
+- Is unsigned between 0 and 180, or between PI/2 and -PI/2? Arctan naturally suggests the latter.
+- Am I doing gaussian correctly? 
 
-		- Thresholding
-		- Change bins based on signed/unsigned
-		- Divide by square root of sum, not just sum
+- Thresholding
+- Change bins based on signed/unsigned
+- Divide by square root of sum, not just sum
 */
 Feature 
-HOGFeatureExtractor::operator()(const CByteImage& img_) const
+	HOGFeatureExtractor::operator()(const CByteImage& img_) const
 {
 	float sigma = _cellSize;
 	/******** BEGIN TODO ********/
@@ -221,7 +221,7 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 				}
 			}
 			magnitudeImg.Pixel(column, row, 0) = maxMag;
-			
+
 			float maxX = derivX.Pixel(column, row, maxBand);
 			float maxY = derivY.Pixel(column, row, maxBand);
 
@@ -272,105 +272,89 @@ HOGFeatureExtractor::operator()(const CByteImage& img_) const
 			// Iterate over center, left, right, up, down
 			int cellX = (int) column / _cellSize;
 			int cellY = (int) row / _cellSize;
-			
+
 			for (int relX = -1; relX <= 1; relX++)
 			{
-					for (int relY = -1; relY <= 1; relY++)
+				for (int relY = -1; relY <= 1; relY++)
+				{
+					if (abs(relX) + abs(relY) == 2)
 					{
-						if (abs(relX) + abs(relY) == 2)
-						{
-							continue;
-						}
-
-						int currentCellX = cellX + relX;
-						int currentCellY = cellY + relY;
-
-						if (currentCellX < 0 || currentCellY < 0 || currentCellX >= feature.Shape().width
-								|| currentCellY >= feature.Shape().height)
-						{
-							continue;
-						}
-
-						int cellCenterX = currentCellX*_cellSize + _cellSize/2.-1;
-						int cellCenterY = currentCellY*_cellSize + _cellSize/2.-1;
-
-						float distance = pow(cellCenterX - column, 2.) + pow(cellCenterY - row, 2.);
-						float gaussianDistance = 1/(pow(sigma, 2)*2*PI) * exp(-distance/(2.* pow(sigma, 2.f)));
-						
-						float featureVal = feature.Pixel(cellX, cellY, binAngle);
-						if (featureVal < 0){
-							auto stop = 1;
-						}
-						feature.Pixel(cellX, cellY, binAngle) += gaussianDistance * magnitudeImg.Pixel(column, row, 0);
-						float mag = magnitudeImg.Pixel(column, row, 0);
+						continue;
 					}
-			}
-		}
-		float epsilon = .1;
-		float threshold = .3;
 
-		for (int y = 0; y < feature.Shape().height; y++)
-		{
-			for (int x = 0; x < feature.Shape().width; x++)
-			{
-				float sum = 0;
-				for (int bin = 0; bin < _nAngularBins; bin++)
-				{
-					sum += pow(feature.Pixel(x, y, bin), 2.f);
-				}
-				
-				//as per the wikipedia article, we add an e of .1
-				
-				sum += pow(epsilon, 2.f);
-				
-				float thresholdedSum = 0;
+					int currentCellX = cellX + relX;
+					int currentCellY = cellY + relY;
 
-				for (int bin = 0; bin < _nAngularBins; bin++)
-				{
-					if (sum <= 0){
+					if (currentCellX < 0 || currentCellY < 0 || currentCellX >= feature.Shape().width
+						|| currentCellY >= feature.Shape().height)
+					{
+						continue;
+					}
+
+					int cellCenterX = currentCellX*_cellSize + _cellSize/2.-1;
+					int cellCenterY = currentCellY*_cellSize + _cellSize/2.-1;
+
+					float distance = pow(cellCenterX - column, 2.) + pow(cellCenterY - row, 2.);
+					float gaussianDistance = 1/(pow(sigma, 2)*2*PI) * exp(-distance/(2.* pow(sigma, 2.f)));
+
+					float featureVal = feature.Pixel(cellX, cellY, binAngle);
+					if (featureVal < 0){
 						auto stop = 1;
 					}
-					
-					feature.Pixel(x, y, bin) /= sqrt(sum);
-					if (feature.Pixel(x, y, bin) > threshold)
-					{
-						feature.Pixel(x, y, bin) = threshold;
-					}
-
-					thresholdedSum += pow(feature.Pixel(x, y, bin), 2.f);
-				}
-
-				thresholdedSum += pow(epsilon, 2.f);
-				for (int bin = 0; bin < _nAngularBins; bin++)
-				{
-					feature.Pixel(x, y, bin) /= sqrt(thresholdedSum);
+					feature.Pixel(cellX, cellY, binAngle) += gaussianDistance * magnitudeImg.Pixel(column, row, 0);
+					float mag = magnitudeImg.Pixel(column, row, 0);
 				}
 			}
 		}
 
 	}
 
+	float epsilon = .1;
+	float threshold = .3;
 
-	// 3) Add contribution each pixel to HOG cells whose
-	//    support overlaps with pixel. Each cell has a support of size
-	//    _cellSize and each histogram has _nAngularBins.
-	// 4) Normalize HOG for each cell. One simple strategy that is
-	//    is also used in the SIFT descriptor is to first threshold
-	//    the bin values so that no bin value is larger than some
-	//    threshold (we leave it up to you do find this value) and
-	//    then re-normalize the histogram so that it has norm 1. A more 
-	//    elaborate normalization scheme is proposed in Dalal & Triggs
-	//    paper but we leave that as extra credit.
-	// 
-	// Useful functions:
-	// convertRGB2GrayImage, TypeConvert, WarpGlobal, Convolve
+	for (int y = 0; y < feature.Shape().height; y++)
+	{
+		for (int x = 0; x < feature.Shape().width; x++)
+		{
+			float sum = 0;
+			for (int bin = 0; bin < _nAngularBins; bin++)
+			{
+				sum += pow(feature.Pixel(x, y, bin), 2.f);
+			}
 
-	/******** END TODO ********/
+			//as per the wikipedia article, we add an e of .1
+
+			sum += pow(epsilon, 2.f);
+
+			float thresholdedSum = 0;
+
+			for (int bin = 0; bin < _nAngularBins; bin++)
+			{
+				if (sum <= 0){
+					auto stop = 1;
+				}
+
+				feature.Pixel(x, y, bin) /= sqrt(sum);
+				if (feature.Pixel(x, y, bin) > threshold)
+				{
+					feature.Pixel(x, y, bin) = threshold;
+				}
+
+				thresholdedSum += pow(feature.Pixel(x, y, bin), 2.f);
+			}
+
+			thresholdedSum += pow(epsilon, 2.f);
+			for (int bin = 0; bin < _nAngularBins; bin++)
+			{
+				feature.Pixel(x, y, bin) /= sqrt(thresholdedSum);
+			}
+		}
+	}
 	return feature;
 }
 
 CByteImage 
-HOGFeatureExtractor::render(const Feature& f) const
+	HOGFeatureExtractor::render(const Feature& f) const
 {
 	CShape cellShape = _oriMarkers[0].Shape();
 	CFloatImage hogImgF(CShape(cellShape.width * f.Shape().width, cellShape.height * f.Shape().height, 1));
@@ -395,7 +379,7 @@ HOGFeatureExtractor::render(const Feature& f) const
 					}
 				}
 			}
-		
+
 		}
 	}
 
